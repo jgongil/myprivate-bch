@@ -121,7 +121,7 @@ class Blockchain {
             let currentTime = parseInt(new Date().getTime().toString().slice(0, -3));
 
             // Check message time must be less than 5 minutes since signature
-            if (currentTime - messageTime < 50*60){
+            if (currentTime - messageTime < 5*60){
                 // Check message was signed by the address
                 if (bitcoinMessage.verify(message, address, signature)){
                     // Creates body with owner and its star
@@ -207,11 +207,8 @@ class Blockchain {
         let errorLog = [];
         return new Promise(async (resolve, reject) => {
             await self.chain.forEach(block => {
-                // checks that previousBlockHash from previous and current block are the same
-                if (block.previousBlockHash == self.chain[block.height-1]){
-                    // checks current block hash hasn´t been altered
-                    block.validate().then((result) => errorLog.push(result));
-                }
+                // checks current block hash hasn´t been altered
+                block.validate().then((result) => errorLog.push(result));
             });
             resolve(errorLog);            
         });
