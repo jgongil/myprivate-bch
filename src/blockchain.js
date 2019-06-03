@@ -73,6 +73,7 @@ class Blockchain {
            // UTC Timestamp in seconds
             block.time = new Date().getTime().toString().slice(0,-3);
             // Block hash with SHA256 using newBlock and converting to a string
+            // !! At the time of hashing the block its hash property is still null
             block.hash = SHA256(JSON.stringify(block)).toString();
             self.chain.push(block);
             self.height = self.chain.length;
@@ -204,13 +205,26 @@ class Blockchain {
      */
     validateChain() {
         let self = this;
-        let errorLog = [];
+        let errorLog = []; // will be true if the block hash is chained AND the block is valid
+
         return new Promise(async (resolve, reject) => {
+            
+            // iterates over the blockchain
             await self.chain.forEach(block => {
-                // checks current block hash hasn´t been altered
-                block.validate().then((result) => errorLog.push(result));
+
+                // if genesis block, previousBlockHash should be null - AND - block.validate() should be true
+                if (block.height == 0) {
+                    block.validate().then((result) => errorLog.push(result & (block.previousBlockHash == null) ));
+                
+                // checks PreviousBlockHash attribute of the current block with the hash attribute of the previous block
+                // AND current block.validate() is true
+                } else if (block.height>0) {
+                    self.getBlockByHeight(block.height-1).then((prevBlock) => {
+                    block.validate().then((result) => errorLog.push(result & (block.previousBlockHash==prevBlock.hash)));
+                    }); 
+                }
             });
-            resolve(errorLog);            
+            resolve(errorLog);           
         });
     }
 
