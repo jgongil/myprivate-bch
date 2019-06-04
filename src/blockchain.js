@@ -202,25 +202,36 @@ class Blockchain {
      * Steps to validate:
      * 1. You should validate each block using `validateBlock`
      * 2. Each Block should check the with the previousBlockHash
+     * 
+     *  Resulting array:
+     *  The function returns errorLog array containing the block numbers of those blocks which are either tampered 
+     *  or not currently linked to the previous block:
+     *  i.e. when the block is tampered, its hash changes affecting the current block and the next one in the chain
      */
     validateChain() {
         let self = this;
-        let errorLog = []; // will be true if the block hash is chained AND the block is valid
+        let errorLog = []; // contains the height of the faulty blocks
 
         return new Promise(async (resolve, reject) => {
             
             // iterates over the blockchain
-            await self.chain.forEach(block => {
+            await self.chain.forEach(async block => {
 
-                // if genesis block, previousBlockHash should be null - AND - block.validate() should be true
+                // if genesis block: previousBlockHash should be null - AND - block.validate() should be true
                 if (block.height == 0) {
-                    block.validate().then((result) => errorLog.push(result & (block.previousBlockHash == null) ));
+                    await block.validate().then( async (result) => {
+                        if (!(result & (block.previousBlockHash == null)))
+                            errorLog.push(block.height);
+                    });
                 
-                // checks PreviousBlockHash attribute of the current block with the hash attribute of the previous block
+                // if not genesis block: checks PreviousBlockHash attribute of the current block with the hash attribute of the previous block
                 // AND current block.validate() is true
-                } else if (block.height>0) {
-                    self.getBlockByHeight(block.height-1).then((prevBlock) => {
-                    block.validate().then((result) => errorLog.push(result & (block.previousBlockHash==prevBlock.hash)));
+                } else if (block.height > 0) {
+                    await self.getBlockByHeight(block.height-1).then( async (prevBlock) => {
+                        await block.validate().then(async (result) => {
+                            if (!(result & (block.previousBlockHash==prevBlock.hash)))
+                                errorLog.push(block.height);
+                        });
                     }); 
                 }
             });
